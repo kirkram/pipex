@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/06 14:39:53 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/06 15:19:02 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,18 +55,16 @@ int		pipex(int *fd, char **av, char **envp)
 	if (pipe(end) == -1)
 		return (1);
 
-	// (void) pid1;
-	// (void) av;
-	// (void) envp;
 	pid1 = fork();
 	if (pid1 < 0)
 		return (1);
-	if (pid1 == 0) //change to == 0 after debug!!!!!!!!!!!!!!!
+	if (pid1 == 0)
 	{
 		child_one(fd, av[2], envp, end);
 	}
 	char *buffer = malloc(4096);
-	read (end[0], buffer, 4096);
+	read (end[0], buffer, 195);
+	buffer[195] = 0; // read cannot be -1 to underflow to size max it must be a positive value
 	ft_printf("the buff now contains %s\n", buffer);
 	free (buffer);
 	if (close(fd[0]) < 0 || close (fd[1]) < 0 || close(end[1] < 0 || close(end[0]) < 0))
@@ -77,38 +75,22 @@ int		pipex(int *fd, char **av, char **envp)
 
 int		child_one(int *fd, char *arg_cmd_1, char **envp, int *end)
 {
-	char	buffer[4096];
 	char	**args;
 	char	**paths;
 	char	*cmd;
 	int		i;
 	//modern pipes are 64k 4k is old standard
 
-	dup2(end[0], STDIN_FILENO);
-	dup2(end[1], STDOUT_FILENO); //now the stdout will be routed into the fd[1];
+	dup2(fd[0], STDIN_FILENO);
+	dup2(end[1], STDOUT_FILENO); //now the stdout will be routed into the end[1] and then we read from end[0];
 	// if = 0 -> too much info in file; gnl seems like overkill for now
-	printf("the 0 is %d and 1 is %d\n", end[0], end[1]);
-	if (read (fd[0], buffer, 4096) < 0)
-		ft_printf("read in child failed\n");
-	if (close(fd[0]) < 0 || close (fd[1]) < 0)
+	//printf("the 0 is %d and 1 is %d\n", end[0], end[1]);
+	if (close(end[0]) < 0 || close(fd[0]) < 0 || close (fd[1]) < 0)
 		return (1);
-	printf("%d\n", end[0]);
-	if (write(end[1], buffer, 4096) < 0)
-	{
-		perror("");
-		return (1);
-	}
 	args = ft_split(arg_cmd_1, ' ');
-	i = 0;
-	while (args[i])
-	{
-		ft_printf("The args %d is %s\n", i, args[i]);
-		i ++;
-	}
 	paths = find_path(envp);
 	if (!paths)
 		return (1);
-	//execve from buf into fd[1];
 	i = 0;
 	while (paths[i])
 	{
@@ -118,23 +100,23 @@ int		child_one(int *fd, char *arg_cmd_1, char **envp, int *end)
 		i ++;
 	}
 	perror("");
-	i = 0;
-	while (args[i])
-	{
-		free (args[i]);
-		i ++;
-	}
-	free (args);
-	i = 0;
-	while (paths[i])
-	{
-		free (paths[i]);
-		i ++;
-	}
-	free (paths);
+	// i = 0;
+	// while (args[i])
+	// {
+	// 	free (args[i]);
+	// 	i ++;
+	// }
+	// free (args);
+	// i = 0;
+	// while (paths[i])
+	// {
+	// 	free (paths[i]);
+	// 	i ++;
+	// }
+	// free (paths);
+	close(fd[0]);
+	close(end[1]);
 	return (1);
-	// it shall overtake the process completely
-	// does it need to be closed?
 }
 
 char	**find_path(char **envp)
