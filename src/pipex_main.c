@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/09 15:06:40 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/09 18:09:59 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,22 +36,14 @@ int	main(int ac, char **av, char **envp)
 	{
 		fd[0] = open(av[1], O_RDONLY);
 		if (fd[0] < 0)
-		{
 			perror("");
-			ft_printf("%s\n", av[1]);
-		}
 		fd[1] = open(av[4], O_CREAT | O_RDWR | O_TRUNC, 0644);
 		if (fd[1] < 0)
 		{
 			perror("");
-			ft_printf("%s\n", av[2]);
-		}
-		if (fd[1] < 0)
-		{
 			free (fd);
 			return (1);
 		}
-		//if we cant open the first file then we still need to proceed with the second
 		if (pipex(fd, av, envp) != 0)
 		{
 			free(fd);
@@ -87,7 +79,6 @@ int	pipex(int *fd, char **av, char **envp)
 	}
 	if (fd[0] >= 0)
 	{
-		//ft_printf("ENTERED A CHILD 1\n");
 		pid[0] = fork();
 		if (pid < 0)
 		{
@@ -116,7 +107,6 @@ int	pipex(int *fd, char **av, char **envp)
 	}
 	if (pid[1] == 0)
 	{
-		//ft_printf("ENTERED A CHILD 2\n");
 		if (child_two(fd, av[3], paths, end) != 0)
 		{
 			perror("");
@@ -139,18 +129,6 @@ int	pipex(int *fd, char **av, char **envp)
 	if (fd[0] >= 0)
 		waitpid(pid[0], NULL, 0);
 	waitpid(pid[1], &status, 0);
-	// if (close (fd[0]) < 0)
-	// 	ft_printf("fd[0] got closed again\n");
-	// if (close (fd[0]) < 0)
-	// 	ft_printf("fd[1] got closed again\n");
-	// if (close (end[0]) < 0)
-	// 	ft_printf("end[0 got closed again\n");
-	// if (close (end[1]) < 0)
-	// 	ft_printf("end[1] got closed again\n");
-	// while (1)
-	// {
-	// 	;
-	// }
 	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
 		return (2);
 	return (0);
