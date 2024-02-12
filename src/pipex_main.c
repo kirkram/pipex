@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/12 17:08:44 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/12 20:08:17 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,7 @@ int	main(int ac, char **av, char **envp)
 		fd = malloc(2 * sizeof(int));
 		if (!fd)
 			return (1);
+
 		if (open_fds(&fd, av) != 0)
 			return (1);
 		if (pipex(fd, av, envp) != 0)
@@ -111,25 +112,39 @@ int	pipex(int *fd, char **av, char **envp)
 	{
 		pid[0] = fork();
 		if (pid < 0)
-			return (free_and_1(NULL, &end));
+			return (free_and_1(paths, &end));
+
+							//
+							//
+							//
+							//
+							//
+							//
+							//
+							//
+							//
+							//
+							//
+
+
 		if (pid[0] == 0)
 			if (child_one(fd, av[2], paths, end) != 0)
-				return (free_and_1(NULL, &end));
+				return (free_and_1(paths, &end));
 	}
 
 	if (pid[0] != 0)
 		pid[1] = fork();
 	if (pid[1] < 0)
-		return (free_and_1(NULL, &end));
+		return (free_and_1(paths, &end));
 	if (pid[1] == 0)
 		if (child_two(fd, av[3], paths, end) != 0)
-			return (free_and_1(NULL, &end));
+			return (free_and_1(paths, &end));
 
 	close (fd[0]);
 	if (close (fd[1]) < 0 || close(end[0] < 0 || close(end[1]) < 0))
-		return (free_and_1(NULL, &end));
+		return (free_and_1(paths, &end));
 	close (end[0]);
-	free_and_1(NULL, &end);
+	free_and_1(paths, &end);
 	if (fd[0] >= 0)
 		waitpid(pid[0], NULL, 0);
 	waitpid(pid[1], &status, 0);
@@ -170,7 +185,11 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 {
 	char	**args;
 	char	*cmd;
+	char	*temp;
 	int		i;
+
+	temp = NULL;
+
 
 	dup2(fd[0], STDIN_FILENO);
 	dup2(end[1], STDOUT_FILENO);
@@ -181,15 +200,58 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 		return (1);
 	}
 	args = ppx_split(arg_cmd_1, ' ');
+	if (!args)
+	{
+		;
+	}
+	//change split so that it skips spaces if the path is specified
 	i = 0;
+	if (ft_strncmp(args[0], "./", 2) == 0)
+	{
+		arg_cmd_1 += 2;
+		if (args[0] && args[1])
+			return (free_and_1(args, NULL));
+		// ft_putstr_fd("\n", 2);
+		temp = malloc(ft_strlen(arg_cmd_1) + 1);
+		if (!temp)
+			return (free_and_1(args, NULL));
+		while (arg_cmd_1[i])
+		{
+			// if (arg_cmd_1[i] == '\\')
+			// 	ft_printf("found \\\n");
+			// if (arg_cmd_1[i] == '\"')
+			// 	ft_printf("found \"n");
+			if (arg_cmd_1[i] == '\"')
+				arg_cmd_1 ++;
+			temp[i] = arg_cmd_1[i];
+			i ++;
+		}
+		temp[i] = '\0';
+		arg_cmd_1 = temp;
+		free (args[0]);
+		args[0] = ft_strdup(arg_cmd_1);
+		i = 0;
+		while (paths[i])
+			i ++;
+		i --;
+	}
 	while (paths[i])
 	{
-		cmd = jointhree(paths[i], "/", args[0]);
+		if (args[0][0] == '/')
+			cmd = jointhree("", "", args[0]);
+		else
+			cmd = jointhree(paths[i], "/", args[0]);
 		execve(cmd, args, NULL);
 		free (cmd);
 		i ++;
 	}
+	ft_putstr_fd(args[0], 2);
+	ft_putstr_fd("\n", 2);
+	ft_putstr_fd(cmd, 2);
+	ft_putstr_fd("\n", 2);
+
 	free_arr_str(args);
+	free (arg_cmd_1);
 	perror("");
 	return (1);
 }
@@ -232,11 +294,10 @@ char	**find_path(char **envp)
 			i = 0;
 			while (i < strcount - 1)
 			{
-				ft_printf("the s is %s\n", temp[i]);
 				paths[i] = ft_strdup(temp[i]);
 				i ++;
 			}
-			paths[i] = ft_strdup(envp[pwd_index]);
+			paths[i] = ft_strdup(envp[pwd_index] + 4);
 			paths[i + 1] = NULL;
 			free_and_1(temp, NULL);
 			return (paths);
