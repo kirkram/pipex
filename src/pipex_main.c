@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/09 18:09:59 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/12 17:08:44 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ char	**find_path(char **envp);
 char	*jointhree(char const *s1, char const *s2, char const *s3);
 int		child_two(int *fd, char *arg_cmd_1, char **paths, int *end);
 void	free_arr_str(char **arr);
+int		open_fds(int **fd, char **av);
 
 int	main(int ac, char **av, char **envp)
 {
@@ -31,19 +32,13 @@ int	main(int ac, char **av, char **envp)
 
 	if (!envp[0])
 		return (1);
-	fd = malloc(2 * sizeof(int));
 	if (ac == 5)
 	{
-		fd[0] = open(av[1], O_RDONLY);
-		if (fd[0] < 0)
-			perror("");
-		fd[1] = open(av[4], O_CREAT | O_RDWR | O_TRUNC, 0644);
-		if (fd[1] < 0)
-		{
-			perror("");
-			free (fd);
+		fd = malloc(2 * sizeof(int));
+		if (!fd)
 			return (1);
-		}
+		if (open_fds(&fd, av) != 0)
+			return (1);
 		if (pipex(fd, av, envp) != 0)
 		{
 			free(fd);
@@ -52,7 +47,44 @@ int	main(int ac, char **av, char **envp)
 		free (fd);
 		return (0);
 	}
-	free (fd);
+	return (1);
+}
+
+int	open_fds(int **fd, char **av)
+{
+	(*fd)[0] = open(av[1], O_RDONLY);
+	if ((*fd)[0] < 0)
+		perror("");
+	(*fd)[1] = open(av[4], O_CREAT | O_RDWR | O_TRUNC, 0644);
+	if ((*fd)[1] < 0)
+	{
+		perror("");
+		free ((*fd));
+		return (1);
+	}
+	return (0);
+}
+
+int	free_and_1(char **paths, int **end)
+{
+	int	i;
+
+	i = 0;
+	if (paths)
+	{
+		while (paths[i])
+		{
+			free (paths[i]);
+			i ++;
+		}
+		free (paths);
+		paths = NULL;
+	}
+	if (end)
+	{
+		free (*end);
+		(*end) = NULL;
+	}
 	return (1);
 }
 
@@ -66,66 +98,38 @@ int	pipex(int *fd, char **av, char **envp)
 	pid[0] = -42;
 	pid[1] = 42;
 	end = malloc(2 * sizeof(int));
-	if (pipe(end) == -1)
-	{
-		free (end);
+	if (!end)
 		return (1);
-	}
+	if (pipe(end) == -1)
+		return (free_and_1(NULL, &end));
+
 	paths = find_path(envp);
 	if (!paths)
-	{
-		free (end);
-		return (1);
-	}
+		return (free_and_1(NULL, &end));
+
 	if (fd[0] >= 0)
 	{
 		pid[0] = fork();
 		if (pid < 0)
-		{
-			free_arr_str(paths);
-			free (end);
-			return (1);
-		}
+			return (free_and_1(NULL, &end));
 		if (pid[0] == 0)
-		{
 			if (child_one(fd, av[2], paths, end) != 0)
-			{
-				perror("");
-				free_arr_str(paths);
-				free (end);
-				return (1);
-			}
-		}
+				return (free_and_1(NULL, &end));
 	}
+
 	if (pid[0] != 0)
 		pid[1] = fork();
 	if (pid[1] < 0)
-	{
-		free_arr_str(paths);
-		free (end);
-		return (1);
-	}
+		return (free_and_1(NULL, &end));
 	if (pid[1] == 0)
-	{
 		if (child_two(fd, av[3], paths, end) != 0)
-		{
-			perror("");
-			free_arr_str(paths);
-			free (end);
-			return (1);
-		}
-	}
+			return (free_and_1(NULL, &end));
+
 	close (fd[0]);
-	if (close (fd[1]) < 0 || \
-	close(end[0] < 0 || close(end[1]) < 0))
-	{
-		free_arr_str(paths);
-		free (end);
-		return (1);
-	}
+	if (close (fd[1]) < 0 || close(end[0] < 0 || close(end[1]) < 0))
+		return (free_and_1(NULL, &end));
 	close (end[0]);
-	free_arr_str(paths);
-	free (end);
+	free_and_1(NULL, &end);
 	if (fd[0] >= 0)
 		waitpid(pid[0], NULL, 0);
 	waitpid(pid[1], &status, 0);
@@ -144,7 +148,10 @@ int	child_two(int *fd, char *arg_cmd_2, char **paths, int *end)
 	dup2(fd[1], STDOUT_FILENO);
 	close(fd[0]);
 	if (close(end[0]) < 0 || close(end[1]) < 0 || close (fd[1]) < 0)
+	{
+		perror("");
 		return (1);
+	}
 	args = ppx_split(arg_cmd_2, ' ');
 	i = 0;
 	while (paths[i])
@@ -155,6 +162,7 @@ int	child_two(int *fd, char *arg_cmd_2, char **paths, int *end)
 		i ++;
 	}
 	free_arr_str(args);
+	perror("");
 	return (1);
 }
 
@@ -168,7 +176,10 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 	dup2(end[1], STDOUT_FILENO);
 	if (close(end[0]) < 0 || close(fd[0]) < 0 || \
 	close (fd[1]) < 0 || close(end[1]))
+	{
+		perror("");
 		return (1);
+	}
 	args = ppx_split(arg_cmd_1, ' ');
 	i = 0;
 	while (paths[i])
@@ -179,27 +190,60 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 		i ++;
 	}
 	free_arr_str(args);
+	perror("");
 	return (1);
 }
 
 char	**find_path(char **envp)
 {
 	char	**paths;
+	char	**temp;
 	int		i;
-
+	int		strcount;
+	int		pwd_index;
 
 	paths = NULL;
+	temp = NULL;
 	i = 0;
 	while (envp[i])
 	{
 		if (ft_strncmp(envp[i], "PATH=", 5) == 0)
 		{
-			paths = ft_split(envp[i] + 5, ':');
+			temp = ft_split(envp[i] + 5, ':');
+			if (!temp)
+				return (NULL);
 			break ;
 		}
 		i ++;
 	}
-	return (paths);
+	i = 0;
+	while (envp[i])
+	{
+		if (ft_strncmp(envp[i], "PWD=", 4) == 0)
+		{
+			pwd_index = i;
+			i = 0;
+			while (temp[i])
+				i ++;
+			strcount = i + 1;
+			paths = malloc((strcount + 1) * sizeof(char *));
+			if (!paths)
+				return (NULL);
+			i = 0;
+			while (i < strcount - 1)
+			{
+				ft_printf("the s is %s\n", temp[i]);
+				paths[i] = ft_strdup(temp[i]);
+				i ++;
+			}
+			paths[i] = ft_strdup(envp[pwd_index]);
+			paths[i + 1] = NULL;
+			free_and_1(temp, NULL);
+			return (paths);
+		}
+		i ++;
+	}
+	return (temp);
 }
 
 char	*jointhree(char const *s1, char const *s2, char const *s3)
