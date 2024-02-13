@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/12 20:08:17 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/13 11:25:31 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,12 +25,13 @@ char	*jointhree(char const *s1, char const *s2, char const *s3);
 int		child_two(int *fd, char *arg_cmd_1, char **paths, int *end);
 void	free_arr_str(char **arr);
 int		open_fds(int **fd, char **av);
+int		look_for_path(char **envp);
 
 int	main(int ac, char **av, char **envp)
 {
 	int	*fd;
 
-	if (!envp[0])
+	if (look_for_path(envp) != 0)
 		return (1);
 	if (ac == 5)
 	{
@@ -47,6 +48,20 @@ int	main(int ac, char **av, char **envp)
 		}
 		free (fd);
 		return (0);
+	}
+	return (1);
+}
+
+int	look_for_path(char **envp)
+{
+	int	i;
+
+	i = 0;
+	while (envp[i])
+	{
+		if (ft_strncmp(envp[i], "PATH=", 5) == 0)
+			return (0);
+		i ++;
 	}
 	return (1);
 }
@@ -204,32 +219,24 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 	{
 		;
 	}
-	//change split so that it skips spaces if the path is specified
 	i = 0;
 	if (ft_strncmp(args[0], "./", 2) == 0)
 	{
 		arg_cmd_1 += 2;
 		if (args[0] && args[1])
 			return (free_and_1(args, NULL));
-		// ft_putstr_fd("\n", 2);
-		temp = malloc(ft_strlen(arg_cmd_1) + 1);
-		if (!temp)
-			return (free_and_1(args, NULL));
+		free (args[0]);
+		args[0] = malloc(ft_strlen(arg_cmd_1) + 1);
+		if (!args[0])
+			return (free_and_1(args + 1, NULL));
 		while (arg_cmd_1[i])
 		{
-			// if (arg_cmd_1[i] == '\\')
-			// 	ft_printf("found \\\n");
-			// if (arg_cmd_1[i] == '\"')
-			// 	ft_printf("found \"n");
-			if (arg_cmd_1[i] == '\"')
+			if (arg_cmd_1[i] == '\\')
 				arg_cmd_1 ++;
-			temp[i] = arg_cmd_1[i];
+			args[0][i] = arg_cmd_1[i];
 			i ++;
 		}
-		temp[i] = '\0';
-		arg_cmd_1 = temp;
-		free (args[0]);
-		args[0] = ft_strdup(arg_cmd_1);
+		args[0][i] = '\0';
 		i = 0;
 		while (paths[i])
 			i ++;
@@ -237,21 +244,24 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 	}
 	while (paths[i])
 	{
+		// ft_putstr_fd(paths[i], 2);
+		// ft_putstr_fd(args[0], 2);
 		if (args[0][0] == '/')
 			cmd = jointhree("", "", args[0]);
 		else
 			cmd = jointhree(paths[i], "/", args[0]);
+		// ft_putstr_fd(cmd, 2);
+		// ft_putstr_fd("\n", 2);
 		execve(cmd, args, NULL);
 		free (cmd);
 		i ++;
 	}
-	ft_putstr_fd(args[0], 2);
-	ft_putstr_fd("\n", 2);
-	ft_putstr_fd(cmd, 2);
-	ft_putstr_fd("\n", 2);
+	// ft_putstr_fd(args[0], 2);
+	// ft_putstr_fd("\n", 2);
+	// ft_putstr_fd(cmd, 2);
+	// ft_putstr_fd("\n", 2);
 
 	free_arr_str(args);
-	free (arg_cmd_1);
 	perror("");
 	return (1);
 }
@@ -259,52 +269,29 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 char	**find_path(char **envp)
 {
 	char	**paths;
-	char	**temp;
 	int		i;
-	int		strcount;
-	int		pwd_index;
+	char	*path;
+	char	*pwd;
 
-	paths = NULL;
-	temp = NULL;
 	i = 0;
+	paths = NULL;
+	path = NULL;
+	pwd = NULL;
 	while (envp[i])
 	{
 		if (ft_strncmp(envp[i], "PATH=", 5) == 0)
-		{
-			temp = ft_split(envp[i] + 5, ':');
-			if (!temp)
-				return (NULL);
-			break ;
-		}
+			path = envp[i] + 5;
+		else if (ft_strncmp(envp[i], "PWD=", 4) == 0)
+			pwd = envp[i] + 4;
 		i ++;
 	}
-	i = 0;
-	while (envp[i])
-	{
-		if (ft_strncmp(envp[i], "PWD=", 4) == 0)
-		{
-			pwd_index = i;
-			i = 0;
-			while (temp[i])
-				i ++;
-			strcount = i + 1;
-			paths = malloc((strcount + 1) * sizeof(char *));
-			if (!paths)
-				return (NULL);
-			i = 0;
-			while (i < strcount - 1)
-			{
-				paths[i] = ft_strdup(temp[i]);
-				i ++;
-			}
-			paths[i] = ft_strdup(envp[pwd_index] + 4);
-			paths[i + 1] = NULL;
-			free_and_1(temp, NULL);
-			return (paths);
-		}
-		i ++;
-	}
-	return (temp);
+	if (path && pwd)
+		paths = ft_split(jointhree(path, ":", pwd), ':');
+	else if (path)
+		paths = ft_split(path, ':');
+	else if (pwd)
+		paths = ft_split(pwd, 127);
+	return (paths);
 }
 
 char	*jointhree(char const *s1, char const *s2, char const *s3)
