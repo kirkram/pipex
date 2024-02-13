@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/13 12:37:16 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/13 15:10:09 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@
 
 #include <errno.h>
 
-int		pipex(int *fd, char **av, char **envp);
+int		pipex(int *fd, char **av, char **envp, t_params *errors);
 int		child_one(int *fd, char *arg_cmd_1, char **envp, int *end);
 char	**find_path(char **envp);
 char	*jointhree(char const *s1, char const *s2, char const *s3);
@@ -26,10 +26,14 @@ int		child_two(int *fd, char *arg_cmd_1, char **paths, int *end);
 void	free_arr_str(char **arr);
 int		open_fds(int **fd, char **av);
 int		look_for_path(char **envp);
+int		user_cmd_path(char **args, char *arg_cmd, char **paths);
+int		free_and_1(char **paths, int **end);
 
 int	main(int ac, char **av, char **envp)
 {
-	int	*fd;
+	int			*fd;
+	t_params	*errors;
+	int			error;
 
 	if (look_for_path(envp) != 0)
 		return (127);
@@ -40,11 +44,18 @@ int	main(int ac, char **av, char **envp)
 			return (1);
 		if (open_fds(&fd, av) != 0)
 			return (1);
-		if (pipex(fd, av, envp) != 0)
+		errors = malloc(sizeof(errors));
+		if (!errors)
+			return (free_and_1(NULL, &fd));
+		errors->error_code = 0;
+		if (pipex(fd, av, envp, errors) != 0)
 		{
 			free(fd);
-			return (0);
+			error = errors->error_code;
+			free (errors);
+			return (error);
 		}
+		free (errors);
 		free (fd);
 		return (0);
 	}
@@ -85,7 +96,7 @@ int	free_and_1(char **paths, int **end)
 	int	i;
 
 	i = 0;
-	if (paths)
+	if (paths && *paths)
 	{
 		while (paths[i])
 		{
@@ -93,7 +104,7 @@ int	free_and_1(char **paths, int **end)
 			i ++;
 		}
 		free (paths);
-		paths = NULL;
+		*paths = NULL;
 	}
 	if (end)
 	{
@@ -103,7 +114,7 @@ int	free_and_1(char **paths, int **end)
 	return (1);
 }
 
-int	pipex(int *fd, char **av, char **envp)
+int	pipex(int *fd, char **av, char **envp, t_params *errors)
 {
 	pid_t	pid[2];
 	int		*end;
@@ -114,45 +125,67 @@ int	pipex(int *fd, char **av, char **envp)
 	pid[1] = 42;
 	end = malloc(2 * sizeof(int));
 	if (!end)
+	{
+		errors->error_code = 1;
 		return (1);
+	}
 	if (pipe(end) == -1)
+	{
+		errors->error_code = 1;
 		return (free_and_1(NULL, &end));
-
+	}
 	paths = find_path(envp);
 	if (!paths)
+	{
+		errors->error_code = 1;
 		return (free_and_1(NULL, &end));
+	}
 
 	if (fd[0] >= 0)
 	{
 		pid[0] = fork();
 		if (pid < 0)
+		{
+			errors->error_code = 1;
 			return (free_and_1(paths, &end));
-
-
-
-
+		}
 		if (pid[0] == 0)
+		{
 			if (child_one(fd, av[2], paths, end) != 0)
-				return (free_and_1(paths, &end));
+				errors->error_code = 127;
+			free_and_1(paths, &end);
+		}
 	}
 
 	if (pid[0] != 0)
 		pid[1] = fork();
 	if (pid[1] < 0)
-		return (free_and_1(paths, &end));
+	{
+		errors->error_code = 1;
+		return (free_and_1(NULL, &end));
+	}
 	if (pid[1] == 0)
+	{
 		if (child_two(fd, av[3], paths, end) != 0)
-			return (free_and_1(paths, &end));
+			errors->error_code = 127;
+		free_and_1(paths, &end);
+	}
 
 	close (fd[0]);
 	if (close (fd[1]) < 0 || close(end[0] < 0 || close(end[1]) < 0))
 		return (free_and_1(paths, &end));
 	close (end[0]);
 	free_and_1(paths, &end);
-	// waitpid(pid[0], NULL, 0);
-	// waitpid(pid[1], &status, 0);
+	waitpid(pid[0], NULL, 0);
+	waitpid(pid[1], &status, 0);
 	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
-		return (2);
+	{
+		// if (!WIFEXITED(status))
+		// 	errors->error_code = WIFEXITED(status);
+		// if (WEXITSTATUS(status) != 0)
+		// 	errors->error_code = WIFEXITED(status);
+		return (errors->error_code);
+	}
 	return (0);
 }
 
@@ -172,9 +205,27 @@ int	child_two(int *fd, char *arg_cmd_2, char **paths, int *end)
 	}
 	args = ppx_split(arg_cmd_2, ' ');
 	i = 0;
+	if (ft_strncmp(args[0], "./", 2) == 0)
+		i = user_cmd_path(args, arg_cmd_2, paths);
+	else if (ft_strchr(args[0], '/'))
+	{
+
+	}
+	else
+	{
+		while (paths[i])
+			i ++;
+		i --;
+		free (paths[i]);
+		paths[i] = NULL;
+		i = 0;
+	}
 	while (paths[i])
 	{
-		cmd = jointhree(paths[i], "/", args[0]);
+		if (args[0][0] == '/')
+			cmd = jointhree("", "", args[0]);
+		else
+			cmd = jointhree(paths[i], "/", args[0]);
 		execve(cmd, args, NULL);
 		free (cmd);
 		i ++;
@@ -184,15 +235,38 @@ int	child_two(int *fd, char *arg_cmd_2, char **paths, int *end)
 	return (1);
 }
 
+int		user_cmd_path(char **args, char *arg_cmd, char **paths)
+{
+	int	i;
+
+	i = 0;
+	arg_cmd += 2;
+	if (args[0] && args[1])
+		return (free_and_1(args, NULL));
+	free (args[0]);
+	args[0] = malloc(ft_strlen(arg_cmd) + 1);
+	if (!args[0])
+		return (free_and_1(args + 1, NULL));
+	while (arg_cmd[i])
+	{
+		if (arg_cmd[i] == '\\')
+			arg_cmd ++;
+		args[0][i] = arg_cmd[i];
+		i ++;
+	}
+	args[0][i] = '\0';
+	i = 0;
+	while (paths[i])
+		i ++;
+	i --;
+	return (i);
+}
+
 int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 {
 	char	**args;
 	char	*cmd;
-	char	*temp;
 	int		i;
-
-	temp = NULL;
-
 
 	dup2(fd[0], STDIN_FILENO);
 	dup2(end[1], STDOUT_FILENO);
@@ -204,51 +278,31 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 	}
 	args = ppx_split(arg_cmd_1, ' ');
 	if (!args)
-	{
-		;
-	}
+		return (1);
 	i = 0;
 	if (ft_strncmp(args[0], "./", 2) == 0)
+		i = user_cmd_path(args, arg_cmd_1, paths);
+	else if (ft_strncmp(args[0], "./", 2) != 0 && \
+	!ft_strchr(args[0], '/'))
 	{
-		arg_cmd_1 += 2;
-		if (args[0] && args[1])
-			return (free_and_1(args, NULL));
-		free (args[0]);
-		args[0] = malloc(ft_strlen(arg_cmd_1) + 1);
-		if (!args[0])
-			return (free_and_1(args + 1, NULL));
-		while (arg_cmd_1[i])
-		{
-			if (arg_cmd_1[i] == '\\')
-				arg_cmd_1 ++;
-			args[0][i] = arg_cmd_1[i];
-			i ++;
-		}
-		args[0][i] = '\0';
-		i = 0;
+		//delete the pwd path
 		while (paths[i])
 			i ++;
 		i --;
+		free (paths[i]);
+		paths[i] = NULL;
+		i = 0;
 	}
 	while (paths[i])
 	{
-		// ft_putstr_fd(paths[i], 2);
-		// ft_putstr_fd(args[0], 2);
-		if (args[0][0] == '/')
+		if (args[0][0] == '/' || ft_strncmp(args[0], "./", 2) == 0)
 			cmd = jointhree("", "", args[0]);
 		else
 			cmd = jointhree(paths[i], "/", args[0]);
-		// ft_putstr_fd(cmd, 2);
-		// ft_putstr_fd("\n", 2);
 		execve(cmd, args, NULL);
 		free (cmd);
 		i ++;
 	}
-	// ft_putstr_fd(args[0], 2);
-	// ft_putstr_fd("\n", 2);
-	// ft_putstr_fd(cmd, 2);
-	// ft_putstr_fd("\n", 2);
-
 	free_arr_str(args);
 	perror("");
 	return (1);

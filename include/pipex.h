@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:28:18 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/07 16:53:18 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/13 13:49:42 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,5 +17,11 @@
 # include "../lib/ft_printf/ft_printf.h"
 
 char		**ppx_split(char const *str, char c);
+
+typedef struct s_params
+{
+	int	error_code;
+
+}	t_params;
 
 #endif
