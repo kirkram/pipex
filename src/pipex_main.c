@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/13 11:25:31 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/13 12:37:16 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,19 +32,18 @@ int	main(int ac, char **av, char **envp)
 	int	*fd;
 
 	if (look_for_path(envp) != 0)
-		return (1);
+		return (127);
 	if (ac == 5)
 	{
 		fd = malloc(2 * sizeof(int));
 		if (!fd)
 			return (1);
-
 		if (open_fds(&fd, av) != 0)
 			return (1);
 		if (pipex(fd, av, envp) != 0)
 		{
 			free(fd);
-			return (2);
+			return (0);
 		}
 		free (fd);
 		return (0);
@@ -129,17 +128,7 @@ int	pipex(int *fd, char **av, char **envp)
 		if (pid < 0)
 			return (free_and_1(paths, &end));
 
-							//
-							//
-							//
-							//
-							//
-							//
-							//
-							//
-							//
-							//
-							//
+
 
 
 		if (pid[0] == 0)
@@ -160,9 +149,8 @@ int	pipex(int *fd, char **av, char **envp)
 		return (free_and_1(paths, &end));
 	close (end[0]);
 	free_and_1(paths, &end);
-	if (fd[0] >= 0)
-		waitpid(pid[0], NULL, 0);
-	waitpid(pid[1], &status, 0);
+	// waitpid(pid[0], NULL, 0);
+	// waitpid(pid[1], &status, 0);
 	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
 		return (2);
 	return (0);
@@ -272,6 +260,7 @@ char	**find_path(char **envp)
 	int		i;
 	char	*path;
 	char	*pwd;
+	char	*bigpath;
 
 	i = 0;
 	paths = NULL;
@@ -285,12 +274,12 @@ char	**find_path(char **envp)
 			pwd = envp[i] + 4;
 		i ++;
 	}
-	if (path && pwd)
-		paths = ft_split(jointhree(path, ":", pwd), ':');
-	else if (path)
+	bigpath = jointhree(path, ":", pwd);
+	if (pwd)
+		paths = ft_split(bigpath, ':');
+	else
 		paths = ft_split(path, ':');
-	else if (pwd)
-		paths = ft_split(pwd, 127);
+	free (bigpath);
 	return (paths);
 }
 
