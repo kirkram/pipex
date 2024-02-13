@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/13 15:10:09 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/13 16:03:11 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@
 
 #include <errno.h>
 
-int		pipex(int *fd, char **av, char **envp, t_params *errors);
+int		pipex(int *fd, char **av, char **envp);
 int		child_one(int *fd, char *arg_cmd_1, char **envp, int *end);
 char	**find_path(char **envp);
 char	*jointhree(char const *s1, char const *s2, char const *s3);
@@ -32,7 +32,6 @@ int		free_and_1(char **paths, int **end);
 int	main(int ac, char **av, char **envp)
 {
 	int			*fd;
-	t_params	*errors;
 	int			error;
 
 	if (look_for_path(envp) != 0)
@@ -44,18 +43,12 @@ int	main(int ac, char **av, char **envp)
 			return (1);
 		if (open_fds(&fd, av) != 0)
 			return (1);
-		errors = malloc(sizeof(errors));
-		if (!errors)
-			return (free_and_1(NULL, &fd));
-		errors->error_code = 0;
-		if (pipex(fd, av, envp, errors) != 0)
+		error = pipex(fd, av, envp);
+		if (error != 0)
 		{
 			free(fd);
-			error = errors->error_code;
-			free (errors);
 			return (error);
 		}
-		free (errors);
 		free (fd);
 		return (0);
 	}
@@ -114,63 +107,48 @@ int	free_and_1(char **paths, int **end)
 	return (1);
 }
 
-int	pipex(int *fd, char **av, char **envp, t_params *errors)
+int	pipex(int *fd, char **av, char **envp)
 {
 	pid_t	pid[2];
 	int		*end;
 	char	**paths;
 	int		status;
+	int		error;
 
 	pid[0] = -42;
 	pid[1] = 42;
 	end = malloc(2 * sizeof(int));
+	error = 0;
 	if (!end)
-	{
-		errors->error_code = 1;
 		return (1);
-	}
 	if (pipe(end) == -1)
-	{
-		errors->error_code = 1;
 		return (free_and_1(NULL, &end));
-	}
 	paths = find_path(envp);
 	if (!paths)
-	{
-		errors->error_code = 1;
 		return (free_and_1(NULL, &end));
-	}
 
 	if (fd[0] >= 0)
 	{
 		pid[0] = fork();
 		if (pid < 0)
-		{
-			errors->error_code = 1;
 			return (free_and_1(paths, &end));
-		}
 		if (pid[0] == 0)
 		{
 			if (child_one(fd, av[2], paths, end) != 0)
-				errors->error_code = 127;
+				error = 127;
 			free_and_1(paths, &end);
 		}
 	}
-
 	if (pid[0] != 0)
 		pid[1] = fork();
 	if (pid[1] < 0)
-	{
-		errors->error_code = 1;
 		return (free_and_1(NULL, &end));
-	}
 	if (pid[1] == 0)
 	{
 		if (child_two(fd, av[3], paths, end) != 0)
-			errors->error_code = 127;
+			error = 127;
 		free_and_1(paths, &end);
 	}
-
 	close (fd[0]);
 	if (close (fd[1]) < 0 || close(end[0] < 0 || close(end[1]) < 0))
 		return (free_and_1(paths, &end));
@@ -178,14 +156,10 @@ int	pipex(int *fd, char **av, char **envp, t_params *errors)
 	free_and_1(paths, &end);
 	waitpid(pid[0], NULL, 0);
 	waitpid(pid[1], &status, 0);
-	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
-	{
-		// if (!WIFEXITED(status))
-		// 	errors->error_code = WIFEXITED(status);
-		// if (WEXITSTATUS(status) != 0)
-		// 	errors->error_code = WIFEXITED(status);
-		return (errors->error_code);
-	}
+	if (error != 0 && (!WIFEXITED(status) || WEXITSTATUS(status) != 0))
+		return (WEXITSTATUS(status));
+	else if (error != 0)
+		return (error);
 	return (0);
 }
 
@@ -285,7 +259,6 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 	else if (ft_strncmp(args[0], "./", 2) != 0 && \
 	!ft_strchr(args[0], '/'))
 	{
-		//delete the pwd path
 		while (paths[i])
 			i ++;
 		i --;
