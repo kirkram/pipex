@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/13 16:03:11 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/13 17:47:29 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,15 +89,15 @@ int	free_and_1(char **paths, int **end)
 	int	i;
 
 	i = 0;
-	if (paths && *paths)
+	if (paths)
 	{
 		while (paths[i])
 		{
 			free (paths[i]);
 			i ++;
 		}
-		free (paths);
-		*paths = NULL;
+		//free (paths);
+		paths = NULL;
 	}
 	if (end)
 	{
@@ -113,12 +113,10 @@ int	pipex(int *fd, char **av, char **envp)
 	int		*end;
 	char	**paths;
 	int		status;
-	int		error;
 
 	pid[0] = -42;
 	pid[1] = 42;
 	end = malloc(2 * sizeof(int));
-	error = 0;
 	if (!end)
 		return (1);
 	if (pipe(end) == -1)
@@ -135,31 +133,34 @@ int	pipex(int *fd, char **av, char **envp)
 		if (pid[0] == 0)
 		{
 			if (child_one(fd, av[2], paths, end) != 0)
-				error = 127;
-			free_and_1(paths, &end);
+				free_and_1(paths, &end);
 		}
 	}
 	if (pid[0] != 0)
 		pid[1] = fork();
 	if (pid[1] < 0)
-		return (free_and_1(NULL, &end));
+		return (free_and_1(paths, &end));
 	if (pid[1] == 0)
 	{
 		if (child_two(fd, av[3], paths, end) != 0)
-			error = 127;
-		free_and_1(paths, &end);
+			free_and_1(paths, &end);
 	}
 	close (fd[0]);
 	if (close (fd[1]) < 0 || close(end[0] < 0 || close(end[1]) < 0))
-		return (free_and_1(paths, &end));
-	close (end[0]);
-	free_and_1(paths, &end);
-	waitpid(pid[0], NULL, 0);
-	waitpid(pid[1], &status, 0);
-	if (error != 0 && (!WIFEXITED(status) || WEXITSTATUS(status) != 0))
+		;
+	waitpid(pid[0], &status, 0);
+	if (waitpid(pid[1], &status, 0) != -1)
+		free_and_1(paths, &end);
+	if (WIFEXITED(status))
+	{
+		// ft_printf(WEXITSTATUS(status));
 		return (WEXITSTATUS(status));
-	else if (error != 0)
-		return (error);
+	}
+
+	// if (error != 0 && (!WIFEXITED(status) || WEXITSTATUS(status) != 0))
+	// 	return (2);
+	// else if (error != 0)
+	// 	return (error);
 	return (0);
 }
 
