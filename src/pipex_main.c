@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/14 15:08:25 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/14 18:10:15 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,15 +90,15 @@ int	free_and_1(char **paths, int **end)
 	int	i;
 
 	i = 0;
-	if (paths)
+	if (paths && *paths)
 	{
 		while (paths[i])
 		{
 			free (paths[i]);
 			i ++;
 		}
-		//free (paths);
-		paths = NULL;
+		*paths = NULL;
+		free (paths);
 	}
 	if (end)
 	{
@@ -127,8 +127,6 @@ int	pipex(int *fd, char **av, char **envp)
 	paths = find_path(envp);
 	if (!paths)
 		return (free_and_1(NULL, &end));
-	// if (access(find_cmd_path(paths, av[3]), X_OK) == -1)
-	// 	access_status = -1;
 	if (fd[0] >= 0)
 	{
 		pid[0] = fork();
@@ -151,39 +149,25 @@ int	pipex(int *fd, char **av, char **envp)
 	{
 		if (child_two(fd, av[3], paths, end) != 0)
 		{
-			if ((av[3][0] == '.' || av[3][0] == '/') && access(av[3], X_OK) == -1)
-			{
-				ft_putstr_fd("2nd cmd exited normally, but the script doesnt have exec rights\n", 2);
-				free_and_1(paths, &end);
-				exit (126);
-			}
 			free_and_1(paths, &end);
+			if ((av[3][0] == '.' || av[3][0] == '/') && \
+			access(av[3], R_OK) == 1 && access(av[3], X_OK) == -1)
+				exit (126);
+			else
+				exit (127);
 		}
 	}
 	else
-	{
-		close (fd[0]);
-		if (close (fd[1]) < 0 || close(end[0] < 0 || close(end[1]) < 0))
+		if (close (fd[1]) < 0 || close(end[0]) < 0 || close(end[1]) < 0 || \
+		close (fd[0]) < 0)
 			;
-	}
 	waitpid(pid[0], NULL, 0);
-	// int pid_sig = waitpid(pid[1], &status, 0);
-	// ft_printf("the pid_sig is %d\n", pid_sig);
-	if (waitpid(pid[1], &status, 0) != -1)
-	{
-		ft_printf("\n---the waitpid wasnt -1, freeing....\n");
-		free_and_1(paths, &end);
-	}
-	else
-	 	perror("waitpid ???");
-	// if (access(PATH, X_OK) == -1)
-	// 	return (126);
+	waitpid(pid[1], &status, 0);
+	free_and_1(paths, &end);
 	if (WIFEXITED(status))
-	{
-		ft_printf("---Returning the wexistatus[1] after WIFEXITED is true---\n");
 		return (WEXITSTATUS(status));
-	}
-
+	else
+		return (127);
 	return (0);
 }
 
@@ -236,8 +220,6 @@ int	child_two(int *fd, char *arg_cmd_2, char **paths, int *end)
 		free (cmd);
 		i ++;
 	}
-	// close(STDIN_FILENO);
-	// close(STDOUT_FILENO);
 	free_arr_str(args);
 	perror("");
 	return (1);
@@ -252,21 +234,35 @@ int		user_cmd_path(char **args, char *arg_cmd, char **paths)
 	if (args[0] && args[1])
 		return (free_and_1(args, NULL));
 	free (args[0]);
-	args[0] = malloc(ft_strlen(arg_cmd) + 1);
+	args[0] = malloc((ft_strlen(arg_cmd) + 1) * 2);
+	// for adding escape chars
 	if (!args[0])
 		return (free_and_1(args + 1, NULL));
 	while (arg_cmd[i])
 	{
-		if (arg_cmd[i] == '\\')
-			arg_cmd ++;
+		// if (arg_cmd[i] == '\"')
+		// {
+		// 	args[0][i] = '\\';
+		// 	i ++;
+		// 	arg_cmd = arg_cmd - 1;
+		// }
 		args[0][i] = arg_cmd[i];
 		i ++;
 	}
 	args[0][i] = '\0';
+
+	// ft_putstr_fd("\n", 2);
+	// ft_putstr_fd("the cmd now is ", 2);
+	// ft_putstr_fd(args[0], 2);
+	// ft_putstr_fd("\n", 2);
+
 	i = 0;
 	while (paths[i])
 		i ++;
 	i --;
+	// ft_putstr_fd("the path is ", 2);
+	// ft_putstr_fd(paths[i], 2);
+	// ft_putstr_fd("\n", 2);
 	return (i);
 }
 
@@ -310,8 +306,6 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 		free (cmd);
 		i ++;
 	}
-	// close(STDIN_FILENO);
-	// close(STDOUT_FILENO);
 	free_arr_str(args);
 	perror("");
 	return (1);
