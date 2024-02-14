@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/13 17:47:29 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/14 15:08:25 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,7 @@ int		open_fds(int **fd, char **av);
 int		look_for_path(char **envp);
 int		user_cmd_path(char **args, char *arg_cmd, char **paths);
 int		free_and_1(char **paths, int **end);
+char	*find_cmd_path(char **paths, char *arg_cmd_2);
 
 int	main(int ac, char **av, char **envp)
 {
@@ -113,9 +114,11 @@ int	pipex(int *fd, char **av, char **envp)
 	int		*end;
 	char	**paths;
 	int		status;
+	int		access_status;
 
 	pid[0] = -42;
 	pid[1] = 42;
+	access_status = 0;
 	end = malloc(2 * sizeof(int));
 	if (!end)
 		return (1);
@@ -124,7 +127,8 @@ int	pipex(int *fd, char **av, char **envp)
 	paths = find_path(envp);
 	if (!paths)
 		return (free_and_1(NULL, &end));
-
+	// if (access(find_cmd_path(paths, av[3]), X_OK) == -1)
+	// 	access_status = -1;
 	if (fd[0] >= 0)
 	{
 		pid[0] = fork();
@@ -133,35 +137,65 @@ int	pipex(int *fd, char **av, char **envp)
 		if (pid[0] == 0)
 		{
 			if (child_one(fd, av[2], paths, end) != 0)
+			{
 				free_and_1(paths, &end);
+				exit (127);
+			}
 		}
 	}
 	if (pid[0] != 0)
 		pid[1] = fork();
 	if (pid[1] < 0)
 		return (free_and_1(paths, &end));
-	if (pid[1] == 0)
+	else if (pid[1] == 0)
 	{
 		if (child_two(fd, av[3], paths, end) != 0)
+		{
+			if ((av[3][0] == '.' || av[3][0] == '/') && access(av[3], X_OK) == -1)
+			{
+				ft_putstr_fd("2nd cmd exited normally, but the script doesnt have exec rights\n", 2);
+				free_and_1(paths, &end);
+				exit (126);
+			}
 			free_and_1(paths, &end);
+		}
 	}
-	close (fd[0]);
-	if (close (fd[1]) < 0 || close(end[0] < 0 || close(end[1]) < 0))
-		;
-	waitpid(pid[0], &status, 0);
+	else
+	{
+		close (fd[0]);
+		if (close (fd[1]) < 0 || close(end[0] < 0 || close(end[1]) < 0))
+			;
+	}
+	waitpid(pid[0], NULL, 0);
+	// int pid_sig = waitpid(pid[1], &status, 0);
+	// ft_printf("the pid_sig is %d\n", pid_sig);
 	if (waitpid(pid[1], &status, 0) != -1)
+	{
+		ft_printf("\n---the waitpid wasnt -1, freeing....\n");
 		free_and_1(paths, &end);
+	}
+	else
+	 	perror("waitpid ???");
+	// if (access(PATH, X_OK) == -1)
+	// 	return (126);
 	if (WIFEXITED(status))
 	{
-		// ft_printf(WEXITSTATUS(status));
+		ft_printf("---Returning the wexistatus[1] after WIFEXITED is true---\n");
 		return (WEXITSTATUS(status));
 	}
 
-	// if (error != 0 && (!WIFEXITED(status) || WEXITSTATUS(status) != 0))
-	// 	return (2);
-	// else if (error != 0)
-	// 	return (error);
 	return (0);
+}
+
+char	*find_cmd_path(char **paths, char *arg_cmd_2)
+{
+	(void)paths;
+	if (access(arg_cmd_2, X_OK) == -1)
+		ft_printf("the path was %s, coudlnt execute \n", arg_cmd_2);
+	else if (access(arg_cmd_2, X_OK) != -1)
+		ft_printf("the path was %s, successful exec\n", arg_cmd_2);
+
+	return (arg_cmd_2);
 }
 
 int	child_two(int *fd, char *arg_cmd_2, char **paths, int *end)
@@ -182,11 +216,8 @@ int	child_two(int *fd, char *arg_cmd_2, char **paths, int *end)
 	i = 0;
 	if (ft_strncmp(args[0], "./", 2) == 0)
 		i = user_cmd_path(args, arg_cmd_2, paths);
-	else if (ft_strchr(args[0], '/'))
-	{
-
-	}
-	else
+	else if (ft_strncmp(args[0], "./", 2) != 0 && \
+	!ft_strchr(args[0], '/'))
 	{
 		while (paths[i])
 			i ++;
@@ -205,6 +236,8 @@ int	child_two(int *fd, char *arg_cmd_2, char **paths, int *end)
 		free (cmd);
 		i ++;
 	}
+	// close(STDIN_FILENO);
+	// close(STDOUT_FILENO);
 	free_arr_str(args);
 	perror("");
 	return (1);
@@ -277,6 +310,8 @@ int	child_one(int *fd, char *arg_cmd_1, char **paths, int *end)
 		free (cmd);
 		i ++;
 	}
+	// close(STDIN_FILENO);
+	// close(STDOUT_FILENO);
 	free_arr_str(args);
 	perror("");
 	return (1);
