@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/15 15:48:15 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/16 12:12:37 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,4 +92,3 @@ int	exit_pipex(char ***paths, int **end, int status)
 	else
 		return (127);
 }
-

@@ -6,7 +6,7 @@
 #    By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/02/05 17:33:34 by klukiano          #+#    #+#              #
-#    Updated: 2024/02/15 17:09:19 by klukiano         ###   ########.fr        #
+#    Updated: 2024/02/16 12:13:07 by klukiano         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,7 +17,8 @@ LIBFT = ./lib/libft/libft.a
 CFLAGS = -Wall -Wextra -Werror
 HEADERS	= -I ./include
 DEBUGFLAGS = -g -fsanitize=address,undefined,integer
-SRCS = ./src/pipex_main.c ./src/pipex_split.c ./src/pipex_prep_func.c ./src/pipex_children.c ./src/pipex_paths.c
+SRCS = ./src/pipex_main.c ./src/pipex_split.c ./src/pipex_prep_func.c \
+./src/pipex_children.c ./src/pipex_paths.c ./src/pipex_split_helper.c
 GNL_SRCS = ./lib/get_next_line/get_next_line_utils.c ./lib/get_next_line/get_next_line.c
 PRINTF_SRCS = ./lib/ft_printf/ft_printf.c ./lib/ft_printf/ft_putchar.c ./lib/ft_printf/printf_putstr.c
 OBJCTS = $(SRCS:.c=.o)

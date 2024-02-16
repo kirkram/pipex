@@ -6,22 +6,19 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/07 15:04:39 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/15 19:12:09 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/16 12:32:13 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
-
-char		**ppx_split(char const *str, char c);
-static int	splitlen(char *str, char c);
-static int	countstrings(char *str, char c);
-static char	**splitter(char *str, char c, char **array);
-static char	**free_reverse(int i, char **array);
+#include "../include/ppx_split.h"
 
 char	**ppx_split(char const *str, char c)
 {
 	char	**array;
+	int		i;
 
+	i = 0;
 	if (str)
 	{
 		array = malloc((countstrings((char *)str, c) + 1) * sizeof(char *));
@@ -33,61 +30,42 @@ char	**ppx_split(char const *str, char c)
 			return (NULL);
 		}
 		else
-			splitter((char *)str, c, array);
+			splitter((char *)str, c, array, i);
 		return (array);
 	}
 	return (NULL);
 }
 
-static char	**splitter(char *str, char c, char **array)
+char	**splitter(char *str, char c, char **array, int i)
 {
-	int		i;
 	int		j;
+	int		x;
 	char	stop_char;
 
-	i = 0;
-	while (*str != '\0')
+	x = 0;
+	while (str[x] != '\0')
 	{
 		j = 0;
-		while (*str == c)
-			str ++;
-		array[i] = malloc(splitlen((char *)str, c) + 1 * sizeof(char));
+		while (str[x] == c)
+			x ++;
+		array[i] = malloc(splitlen(str + x, c) + 1 * sizeof(char));
 		if (array[i] == NULL)
 			return (free_reverse(i, array));
-		if (*str == '\'' || *str == '\"')
+		stop_char = skip_chars(&x, str, stop_char, c);
+		while (str[x] != stop_char && str[x] != '\0')
 		{
-			stop_char = *str;
-			str ++;
-			while (*str != stop_char && *str != '\0')
-			{
-				array[i][j] = *str;
-				j ++;
-				str ++;
-			}
-			if (*str)
-				str ++;
-			array[i][j] = '\0';
-			i ++;
+			array[i][j] = str[x];
+			j ++;
+			x ++;
 		}
-		else
-		{
-			while (*str != c && *str != '\0')
-			{
-				array[i][j] = *str;
-				j ++;
-				str ++;
-			}
-			array[i][j] = '\0';
-			while (*str == c && *str != '\0')
-				str ++;
-			i ++;
-		}
+		array[i][j] = '\0';
+		skip_esc_and_c(stop_char, &x, str, c);
+		i ++;
 	}
-	array[i] = NULL;
-	return (array);
+	return (return_and_nullterm(&array, i));
 }
 
-static int	splitlen(char *str, char c)
+int	splitlen(char *str, char c)
 {
 	int		i;
 	char	stop_char;
@@ -106,7 +84,7 @@ static int	splitlen(char *str, char c)
 	return (i);
 }
 
-static	int	countstrings(char *str, char c)
+int	countstrings(char *str, char c)
 {
 	int		count;
 	char	stop_char;
@@ -131,15 +109,4 @@ static	int	countstrings(char *str, char c)
 				str ++;
 	}
 	return (count);
-}
-
-static char	**free_reverse(int i, char **array)
-{
-	while (i >= 0)
-	{
-		free (array[i]);
-		i --;
-	}
-	free (array);
-	return (NULL);
 }
