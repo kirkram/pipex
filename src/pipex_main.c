@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/19 12:28:57 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/19 15:10:01 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,7 +51,7 @@ int	pipex(int *fd, char **av, char **paths, int *end)
 	if (fd[0] >= 0)
 	{
 		pid[0] = fork();
-		if (pid < 0)
+		if (pid[0] < 0)
 			return (free_and_1(paths, &end));
 		else if (pid[0] == 0)
 			if (child_first(fd, av, paths, end) && free_and_1(paths, &end))
@@ -61,11 +61,12 @@ int	pipex(int *fd, char **av, char **paths, int *end)
 	if (pid[1] < 0)
 		return (free_and_1(paths, &end));
 	else if (pid[1] == 0)
-		return (handle_last_process(fd, av, &paths, &end));
+		handle_last_process(fd, av, &paths, &end);
 	else
 		close_all_fds(fd, end);
 	waitpid(pid[0], NULL, 0);
 	waitpid(pid[1], &status, 0);
+	close_all_fds(fd, end);
 	return (exit_pipex(&paths, &end, status));
 }
 

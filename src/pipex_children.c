@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/15 15:47:12 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/19 12:27:12 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/19 14:58:54 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,15 +16,14 @@ int	child_first(int *fd, char **av, char **paths, int *end)
 {
 	dup2(fd[0], STDIN_FILENO);
 	dup2(end[1], STDOUT_FILENO);
-	if (close(end[0]) < 0 || close(fd[0]) < 0 || \
-	close (fd[1]) < 0 || close(end[1]))
+	if (close (end[0]) < 0 || close (fd[0]) < 0 || \
+	close (fd[1]) < 0 || close (end[1]) < 0)
 	{
 		perror("pipex: ");
 		return (1);
 	}
 	execute_child(av[2], paths);
-	handle_failed_execve(av[2]);
-	return (1);
+	return (handle_failed_execve(av[2]));
 }
 
 int	execute_child(char *arg_cmd, char **paths)
@@ -47,26 +46,13 @@ int	execute_child(char *arg_cmd, char **paths)
 			cmd = jointhree("", "", args[0]);
 		else
 			cmd = jointhree(paths[i], "/", args[0]);
-		execve(cmd, args, NULL);
+		if (!access(cmd, F_OK) && !access(cmd, X_OK))
+			execve(cmd, args, NULL);
 		free (cmd);
 		i ++;
 	}
 	free_and_1(args, NULL);
 	return (1);
-}
-
-int	child_last(int *fd, char **av, char **paths, int *end)
-{
-	dup2(end[0], STDIN_FILENO);
-	dup2(fd[1], STDOUT_FILENO);
-	close(fd[0]);
-	if (close(end[0]) < 0 || close(end[1]) < 0 || close (fd[1]) < 0)
-	{
-		perror("pipex: ");
-		return (1);
-	}
-	execute_child(av[3], paths);
-	return (handle_failed_execve(av[3]));
 }
 
 int	handle_last_process(int *fd, char **av, char ***paths, int **end)
@@ -82,6 +68,20 @@ int	handle_last_process(int *fd, char **av, char ***paths, int **end)
 		exit (127);
 	}
 	exit (127);
+}
+
+int	child_last(int *fd, char **av, char **paths, int *end)
+{
+	dup2(end[0], STDIN_FILENO);
+	dup2(fd[1], STDOUT_FILENO);
+	close(fd[0]);
+	if (close(end[0]) < 0 || close(end[1]) < 0 || close (fd[1]) < 0)
+	{
+		perror("pipex: ");
+		return (1);
+	}
+	execute_child(av[3], paths);
+	return (handle_failed_execve(av[3]));
 }
 
 int	handle_failed_execve(char *arg_cmd)
