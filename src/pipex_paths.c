@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/15 15:49:05 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/15 15:50:00 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/16 17:48:55 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,31 +14,29 @@
 
 char	**find_path(char **envp)
 {
-	char	**paths;
-	int		i;
-	char	*path;
-	char	*pwd;
-	char	*bigpath;
+	t_paths	vars;
 
-	i = 0;
-	paths = NULL;
-	path = NULL;
-	pwd = NULL;
-	while (envp[i])
+	vars.paths = NULL;
+	vars.i = 0;
+	vars.path = NULL;
+	vars.pwd = NULL;
+	while (envp[vars.i])
 	{
-		if (ft_strncmp(envp[i], "PATH=", 5) == 0)
-			path = envp[i] + 5;
-		else if (ft_strncmp(envp[i], "PWD=", 4) == 0)
-			pwd = envp[i] + 4;
-		i ++;
+		if (ft_strncmp(envp[vars.i], "PATH=", 5) == 0)
+			vars.path = envp[vars.i] + 5;
+		else if (ft_strncmp(envp[vars.i], "PWD=", 4) == 0)
+			vars.pwd = envp[vars.i] + 4;
+		vars.i ++;
 	}
-	bigpath = jointhree(path, ":", pwd);
-	if (pwd)
-		paths = ft_split(bigpath, ':');
+	vars.bigpath = jointhree(vars.path, ":", vars.pwd);
+	if (vars.pwd && vars.path)
+		vars.paths = ft_split(vars.bigpath, ':');
+	else if (vars.path)
+		vars.paths = ft_split(vars.path, ':');
 	else
-		paths = ft_split(path, ':');
-	free (bigpath);
-	return (paths);
+		vars.paths = ft_split(vars.pwd, ':');
+	free (vars.bigpath);
+	return (vars.paths);
 }
 
 char	*jointhree(char const *s1, char const *s2, char const *s3)

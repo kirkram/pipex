@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 11:24:04 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/16 12:12:37 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/19 12:28:57 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,8 @@ int	main(int ac, char **av, char **envp)
 			return (1);
 		paths = find_path(envp);
 		if (!paths)
+			free(fd);
+		if (!paths)
 			return (1);
 		exit_stat = pipex(fd, av, paths, end);
 		free (fd);
@@ -52,7 +54,7 @@ int	pipex(int *fd, char **av, char **paths, int *end)
 		if (pid < 0)
 			return (free_and_1(paths, &end));
 		else if (pid[0] == 0)
-			if (child_first(fd, av[2], paths, end) && free_and_1(paths, &end))
+			if (child_first(fd, av, paths, end) && free_and_1(paths, &end))
 				exit (127);
 	}
 	pid[1] = fork();
@@ -67,20 +69,11 @@ int	pipex(int *fd, char **av, char **paths, int *end)
 	return (exit_pipex(&paths, &end, status));
 }
 
-int	handle_last_process(int *fd, char **av, char ***paths, int **end)
-{
-	if (child_last(fd, av[3], *paths, *end) != 0)
-		free_and_1(*paths, end);
-	if (ft_strncmp(av[3], "./", 2) == 0 && access(av[3], X_OK) == -1)
-		exit (126);
-	exit (127);
-}
-
 void	close_all_fds(int *fd, int *end)
 {
 	close (fd[1]);
-	close(end[0]);
-	close(end[1]);
+	close (end[0]);
+	close (end[1]);
 	close (fd[0]);
 }
 

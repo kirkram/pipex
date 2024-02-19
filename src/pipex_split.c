@@ -6,12 +6,11 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/07 15:04:39 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/16 12:32:13 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/16 12:36:22 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
-#include "../include/ppx_split.h"
 
 char	**ppx_split(char const *str, char c)
 {

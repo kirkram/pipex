@@ -1,3 +1,15 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    Makefile                                           :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2024/02/18 12:41:17 by klukiano          #+#    #+#              #
+#    Updated: 2024/02/18 12:41:19 by klukiano         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
 NAME = libft.a
 CFLAGS = -Wall -Wextra -Werror
 SRCS =  ft_isalpha.c ft_isdigit.c ft_isalnum.c ft_isascii.c ft_isprint.c ft_strlen.c ft_memset.c ft_bzero.c ft_memcpy.c\
@@ -12,7 +24,7 @@ RM = rm -f
 
 all: $(NAME)
 
-$(NAME): $(OBJCTS) $(BONUS_OBJCTS) $(BONUS_SRCS)
+$(NAME): $(SRCS) $(BONUS_SRCS) $(OBJCTS) $(BONUS_OBJCTS)
 	$(LIBCR) $(BONUS_OBJCTS)
 
 %.o: %.c
@@ -20,9 +32,11 @@ $(NAME): $(OBJCTS) $(BONUS_OBJCTS) $(BONUS_SRCS)
 
 clean: 
 	$(RM) $(OBJCTS) $(BONUS_OBJCTS)
-	$(RM) .bonus
 
 fclean: clean
 	$(RM) $(NAME)
 
 re: fclean all
+
+
+.PHONY: all, clean, fclean, re
