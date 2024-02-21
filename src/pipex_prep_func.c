@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/15 15:01:42 by klukiano          #+#    #+#             */
-/*   Updated: 2024/02/19 11:08:15 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/02/20 10:33:48 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,8 +40,6 @@ int	open_fds(int **fd, char **av)
 	(*fd)[1] = open(av[4], O_CREAT | O_RDWR | O_TRUNC, 0644);
 	if ((*fd)[1] < 0)
 	{
-		ft_putstr_fd("pipex: couldnt create outfile", 2);
-		ft_putstr_fd("\n", 2);
 		free ((*fd));
 		return (1);
 	}

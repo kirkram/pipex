@@ -6,7 +6,7 @@
 #    By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/02/05 17:33:34 by klukiano          #+#    #+#              #
-#    Updated: 2024/02/18 12:11:24 by klukiano         ###   ########.fr        #
+#    Updated: 2024/02/19 15:52:30 by klukiano         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,7 +26,6 @@ all: $(NAME)
 
 $(NAME): $(LIBFT) $(SRCS) $(PRINTF_SRCS)
 	cc $(CFLAGS) $(HEADERS) $(SRCS) $(PRINTF_SRCS) $(LIBFT) -o $(NAME)
-
 
 $(LIBFT):
 	make -C $(LIBFT_PATH)
